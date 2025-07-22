@@ -1,0 +1,19 @@
+.dashboard-view {
+    padding: 1rem;
+}
+
+.component-grid {
+    display: grid;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.grid-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.component {
+    min-height: 200px;
+    border: 1px solid #ddd;

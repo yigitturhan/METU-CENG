@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebDash</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow mb-4">
+    <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+        <a href="{% url 'dashboard_list' %}" class="text-lg font-semibold">WebDash</a>
+        {% if request.session.username %}
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="text-red-500">Logout</button>
+            </form>
+        {% endif %}
+    </div>
+</nav>
+
+    <main class="container mx-auto px-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>

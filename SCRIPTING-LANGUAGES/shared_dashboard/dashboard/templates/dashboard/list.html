@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="notification-container" class="fixed top-4 right-4 z-50 flex flex-col gap-4 w-full max-w-sm"></div>
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboards</h1>
+
+        <form method="post" action="{% url 'create_dashboard' %}" class="flex gap-3">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Dashboard Name"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                required>
+            <button type="submit"
+                class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                Create
+            </button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for id, desc in dashboards %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition duration-200">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800">{{ desc }}</h3>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <a href="{% url 'attach_dashboard' id %}"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-200">
+                        <span>Open</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not dashboards %}
+    <div class="text-center py-12">
+        <div class="bg-gray-50 rounded-lg p-8 max-w-md mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-gray-600">Not available dashboards yet.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    class NotificationManager {
+        constructor() {
+            this.container = document.getElementById('notification-container');
+        }
+
+        show(message, type = 'success', duration = 5000) {
+            const notification = this.createNotification(message, type);
+            this.container.appendChild(notification);
+            requestAnimationFrame(() => {
+                notification.classList.remove('translate-x-[110%]');
+                notification.classList.add('translate-x-0');
+            });
+            setTimeout(() => { this.hide(notification); }, duration);
+        }
+
+        hide(notification) {
+            notification.classList.remove('translate-x-0');
+            notification.classList.add('translate-x-[110%]');
+            setTimeout(() => { notification.remove(); }, 300);
+        }
+
+        createNotification(message, type) {
+            const element = document.createElement('div');
+            element.className = `notification transform transition-all duration-3000 ease-in-out translate-x-[110%]`;
+
+            element.innerHTML = `
+            <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-700">${message}</p>
+                    </div>
+                </div>
+            </div>`;
+            return element;
+        }
+    }
+
+    const notificationManager = new NotificationManager();
+    let currentDashboards = new Set();
+
+    function updateDashboards() {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newDashboards = new Set(
+                    Array.from(doc.querySelectorAll('.grid > div'))
+                        .map(div => div.querySelector('h3').textContent.trim())
+                );
+
+
+                const added = [...newDashboards].filter(x => !currentDashboards.has(x));
+                if (added.length > 0) {
+                    notificationManager.show(`New dashboard added: ${added.join(', ')}`);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                }
+
+                currentDashboards = newDashboards;
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dashboards = document.querySelectorAll('.grid > div h3');
+        currentDashboards = new Set([...dashboards].map(h3 => h3.textContent.trim()));
+        setInterval(updateDashboards, 3000);
+    });
+</script>
+{% endblock %}

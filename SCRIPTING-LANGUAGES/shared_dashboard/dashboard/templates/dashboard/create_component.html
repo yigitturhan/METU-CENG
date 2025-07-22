@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="create-component">
+   <h2>New Component</h2>
+   
+   <form method="post" class="space-y-4">
+       {% csrf_token %}
+       
+       <div>
+           <label>Component Type</label>
+           <select name="type" required>
+    {% for type, desc in components %}
+        <option value="{{ type }}">{{ type }}: {{ desc }}</option>
+    {% endfor %}
+</select>
+       </div>
+
+       <div>
+           <label>Position</label>
+           <input type="number" name="row" value="0" min="0"> Row
+           <input type="number" name="col" value="-1" min="-1"> Column
+       </div>
+
+       <div>
+    <h3>Environment Variables</h3>
+    <div id="env-vars">
+        <div>
+            <input type="text" name="env_vars[0][key]" placeholder="Key">
+            <input type="text" name="env_vars[0][value]" placeholder="Value">
+        </div>
+    </div>
+    <button type="button" onclick="addEnvVar()">+ Add Env Var</button>
+</div>
+
+       <button type="submit">Create</button>
+   </form>
+</div>
+
+<script>
+let envVarIndex = 1;
+
+function addEnvVar() {
+    const container = document.getElementById('env-vars');
+    const div = document.createElement('div');
+    div.innerHTML = `
+        <input type="text" name="env_vars[${envVarIndex}][key]" placeholder="Key">
+        <input type="text" name="env_vars[${envVarIndex}][value]" placeholder="Value">
+    `;
+    container.appendChild(div);
+    envVarIndex++;
+}
+</script>
+{% endblock %}

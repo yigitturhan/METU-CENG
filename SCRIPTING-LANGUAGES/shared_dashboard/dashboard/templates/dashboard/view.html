@@ -1,0 +1,1179 @@
+{% extends "base.html" %}
+
+<style>
+    .dashboard-container>.component {
+        width: var(--component-width);
+        height: var(--component-height);
+        position: absolute;
+        transform: translate(var(--x), var(--y));
+    }
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background-color: #4CAF50;
+        color: white;
+        padding: 16px;
+        border-radius: 4px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: none;
+    }
+
+    .notification-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .notification-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        margin-left: 16px;
+    }
+</style>
+
+{% block content %}
+{% csrf_token %}
+<!-- Notification container'ın konumunu ve genişliğini düzenleyelim -->
+<div id="notification-container" class="fixed top-4 right-4 z-50 flex flex-col gap-4 w-full max-w-sm">
+    {% if notification %}
+    <div class="notification transform transition-all duration-300 ease-in-out translate-x-[110%]" role="alert">
+        <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center space-x-3">
+                <!-- Success Icon -->
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <!-- Message -->
+                <div class="flex-1">
+                    <p class="text-sm text-gray-700">{{ notification }}</p>
+                </div>
+                <!-- Close Button -->
+                <button class="notification-close flex-shrink-0 text-gray-400 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<script>
+    class NotificationManager {
+        constructor() {
+            this.container = document.getElementById('notification-container');
+        }
+
+        show(message, type = 'success', duration = 5000) {
+            const notification = this.createNotification(message, type);
+            this.container.appendChild(notification);
+
+            requestAnimationFrame(() => {
+                notification.classList.remove('translate-x-[110%]');
+                notification.classList.add('translate-x-0');
+            });
+
+            setTimeout(() => {
+                this.hide(notification);
+            }, duration);
+
+            const closeBtn = notification.querySelector('.notification-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.hide(notification));
+            }
+        }
+
+        hide(notification) {
+            notification.classList.remove('translate-x-0');
+            notification.classList.add('translate-x-[110%]');
+
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }
+
+        createNotification(message, type) {
+            const colors = {
+                success: 'green',
+                error: 'red',
+                warning: 'yellow',
+                info: 'blue'
+            };
+
+            const color = colors[type] || colors.success;
+
+            const element = document.createElement('div');
+            element.className = `notification transform transition-all duration-300 ease-in-out translate-x-[110%]`;
+            element.innerHTML = `
+            <div class="bg-white border-l-4 border-${color}-500 rounded-lg shadow-lg p-4 max-w-sm">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-${color}-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="${this.getIconPath(type)}"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-700">${message}</p>
+                    </div>
+                    <button class="notification-close flex-shrink-0 text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+            return element;
+        }
+
+        getIconPath(type) {
+            const icons = {
+                success: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                error: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+                info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+            };
+            return icons[type] || icons.success;
+        }
+    }
+
+    const notificationManager = new NotificationManager();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const notification = document.querySelector('.notification');
+        if (notification) {
+            const message = notification.querySelector('.notification-message')?.textContent;
+            if (message) {
+                notificationManager.show(message);
+                notification.remove();
+            }
+        }
+    });
+    function hideNotification(notification) {
+        notification.classList.remove('translate-x-0');
+        notification.classList.add('translate-x-[110%]');
+
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }
+
+
+
+</script>
+<div id="env-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div
+        class="bg-white p-6 rounded-lg max-w-md w-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Component Configuration</h3>
+            <button type="button" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form id="env-form" class="space-y-4">
+            <div id="env-fields" class="space-y-4"></div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button type="button" id="modal-cancel-btn" class="px-4 py-2 border rounded hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">
+                    Create Component
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="flex min-h-screen">
+    <div id="component-toolbox" class="fixed left-0 w-64 bg-white shadow-lg h-screen overflow-y-auto">
+        <div class="p-4">
+            <div class="border-b pb-2 mb-4">
+                <button onclick="toggleComponentList()" class="flex items-center justify-between w-full">
+                    <span class="text-lg font-semibold">Components</span>
+                    <svg id="arrow-icon" class="w-5 h-5 transform transition-transform" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+            </div>
+            <div id="component-list">
+                {% for type, desc in components %}
+                <div class="component-tool p-2 mb-2 bg-gray-100 rounded cursor-move hover:bg-gray-200" draggable="true"
+                    data-component-type="{{ type }}">
+                    {{ type }}
+                    <small class="block text-gray-600">{{ desc }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="ml-64 flex-1 p-4 relative">
+        <div class="dashboard-view">
+            <div class="flex justify-between mb-4">
+                <h2 class="text-xl font-bold">{{ dashboard_data.name }}</h2>
+                <div class="controls">
+                    <form method="post" action="{% url 'attach_dashboard' dashboard_id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Refresh</button>
+                    </form>
+                    <form method="post" action="{% url 'detach_dashboard' dashboard_id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded">Close</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs flex border-b border-gray-200">
+                    {% for tab in tabs %}
+                    <button class="tab-button px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700"
+                        data-tab="{{ tab.name }}">
+                        {{ tab.name }}
+                    </button>
+                    {% endfor %}
+
+                    <form method="post" action="{% url 'create_tab' dashboard_id %}" class="inline-flex ml-4">
+                        {% csrf_token %}
+                        <input type="text" name="tab_name" placeholder="New Tab"
+                            class="border-gray-300 rounded-l px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-500 text-white px-3 py-1.5 rounded-r">
+                            +
+                        </button>
+                    </form>
+                </div>
+
+                {% for tab in tabs %}
+                <div class="tab-content {% if not forloop.first %}hidden{% endif %}" id="tab-{{ tab.name }}">
+
+
+                    <div class="dashboard-container" style="display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                            gap: 10px;
+                            min-height: 100vh;
+                            position: relative;">
+
+
+
+                        <div class="component-grid mt-4">
+                            {% for row in tab.components %}
+                            <div class="grid-row flex gap-4 mb-4">
+                                {% for component in row %}
+                                {% if component %}
+                                <div class="component bg-white p-4 rounded shadow flex-1"
+                                    data-component-id="{{ component.id }}">
+                                    <div class="component-header border-b pb-2 mb-2">
+                                        <h3 class="font-bold">{{ component.title }}</h3>
+                                    </div>
+                                    <div class="component-content mb-4">
+                                        <div class="component-content mb-4 whitespace-pre-line">
+                                            {{ component.views|safe }}
+                                        </div>
+                                        {% if component.title == 'Chat' %}
+                                        <div class="chat-controls mt-4">
+                                            <form method="post"
+                                                action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                class="flex gap-2">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="event" value="submit">
+                                                <input type="hidden" name="username"
+                                                    value="{{ request.session.username }}">
+                                                <input type="text" name="mess" placeholder="Type your message..."
+                                                    class="flex-1 border rounded px-3 py-2">
+                                                <button type="submit"
+                                                    class="bg-blue-500 text-white px-4 py-2 rounded">Send
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                        {% if component.title == 'DBQuery' %}
+                                        <div class="dbquery-controls mt-4">
+                                            <form method="post"
+                                                action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                class="flex gap-2">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="event" value="execute">
+                                                <input type="hidden" name="username"
+                                                    value="{{ request.session.username }}">
+                                                <input type="text" name="db"
+                                                    placeholder="Write the db you want to execute your query on"
+                                                    class="flex-1 border rounded px-3 py-2">
+                                                <input type="text" name="query" placeholder="Write your query"
+                                                    class="flex-1 border rounded px-3 py-2">
+                                                <button type="submit"
+                                                    class="bg-blue-500 text-white px-4 py-2 rounded">Execute
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                        {% if component.title == 'DBUpdate' %}
+                                        <div class="dbupdate-controls mt-4">
+                                            <form method="post"
+                                                action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                class="flex flex-col gap-2">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="event" value="execute">
+                                                <div class="flex flex-col">
+                                                    <input type="text" name="db"
+                                                        placeholder="Database name (e.g., data.db)"
+                                                        value="{{ component.param.db|default:'' }}"
+                                                        class="border rounded px-3 py-2 mb-2">
+                                                    <textarea name="query" placeholder="Enter your parameters" rows="3"
+                                                        class="border rounded px-3 py-2"></textarea>
+                                                    {{ component.qry }}
+                                                </div>
+                                                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+                                                    Execute Query
+                                                </button>
+                                            </form>
+
+                                        </div>
+                                        {% endif %}
+
+
+                                        {% if component.title == 'Timer' %}
+                                        <div class="h-full flex flex-col justify-center">
+                                            <div class="timer-controls flex gap-2">
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="{{ action }}">
+                                                    <input type="hidden" name="event" value="start">
+                                                    <button class="bg-green-500 text-white px-3 py-1 rounded">
+                                                        Start
+                                                    </button>
+                                                </form>
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="{{ action }}">
+                                                    <input type="hidden" name="event" value="stop">
+                                                    <button class="bg-red-500 text-white px-3 py-1 rounded">
+                                                        Stop
+                                                    </button>
+                                                </form>
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="{{ action }}">
+                                                    <input type="hidden" name="event" value="pause">
+                                                    <button class="bg-yellow-500 text-white px-3 py-1 rounded">
+                                                        Pause
+                                                    </button>
+                                                </form>
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="{{ action }}">
+                                                    <input type="hidden" name="event" value="reset">
+                                                    <button class="bg-gray-500 text-white px-3 py-1 rounded">
+                                                        Reset
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% if component.title == 'FileShare' %}
+                                        <div class="fileshare-controls mt-4">
+                                            <form method="post"
+                                                action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                class="inline">
+                                                {% csrf_token %}
+                                                <div class="mb-2">
+                                                    <label for="filename-input-{{ component.id }}"
+                                                        class="block text-sm font-medium">
+                                                        Filename
+                                                    </label>
+                                                    <input type="text" id="filename-input-{{ component.id }}"
+                                                        name="filename" placeholder="Enter filename"
+                                                        class="border px-2 py-1 rounded w-full">
+                                                </div>
+                                                <div class="mb-4">
+                                                    <label for="filecontent-input-{{ component.id }}"
+                                                        class="block text-sm font-medium">
+                                                        File Content
+                                                    </label>
+                                                    <textarea id="filecontent-input-{{ component.id }}" name="content"
+                                                        placeholder="Enter file content"
+                                                        class="border px-2 py-1 rounded w-full h-24"></textarea>
+                                                </div>
+                                                <input type="hidden" name="event" value="upload">
+                                                <button type="submit"
+                                                    class="bg-green-500 text-white px-3 py-1 rounded w-full">
+                                                    Upload
+                                                </button>
+                                            </form>
+                                            <hr class="my-4">
+                                            <select name="filename" id="file-select-{{ component.id }}"
+                                                class="border px-2 py-1 rounded mb-2 w-full">
+                                                {% for file in component.files %}
+                                                <option value="{{ file.name }}">{{ file.name }} ({{ file.size }} bytes)
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="flex gap-2">
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" id="filename-hidden-{{ component.id }}"
+                                                        name="filename" value="">
+                                                    <input type="hidden" name="event" value="download">
+                                                    <button class="bg-blue-500 text-white px-3 py-1 rounded">Download
+                                                    </button>
+                                                </form>
+                                                <form method="post"
+                                                    action="{% url 'trigger_component' dashboard_id component.id %}"
+                                                    class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" id="filename-hidden-delete-{{ component.id }}"
+                                                        name="filename" value="">
+                                                    <input type="hidden" name="event" value="delete">
+                                                    <button class="bg-red-500 text-white px-3 py-1 rounded">Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+
+                                    </div>
+                                    {% if component.param %}
+                                    <form method="post"
+                                        action="{% url 'trigger_component' dashboard_id component.id %}">
+                                        {% csrf_token %}
+                                        {% for param_name, param_value in component.param.items %}
+                                        <div class="param-input mb-2">
+                                            <label class="block text-sm font-medium">
+                                                {{ param_name }}
+                                            </label>
+                                            <input type="text" name="{{ param_name }}" value="{{ param_value }}"
+                                                class="border px-2 py-1 w-full rounded">
+                                        </div>
+                                        {% endfor %}
+                                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded w-full">
+                                            Update
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+
+<script>
+function createChatControls(component) {
+    return `
+        <div class="chat-controls mt-4">
+            <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="flex gap-2">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                <input type="hidden" name="event" value="submit">
+                <input type="hidden" name="username" value="${currentUsername}">
+                <input type="text" name="mess" placeholder="Type your message..." class="flex-1 border rounded px-3 py-2">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Send</button>
+            </form>
+        </div>
+    `;
+}
+
+function createDBQueryControls(component) {
+    return `
+        <div class="dbquery-controls mt-4">
+            <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="flex gap-2">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                <input type="hidden" name="event" value="execute">
+                <input type="hidden" name="username" value="${currentUsername}">
+                <input type="text" name="db" placeholder="Write the db you want to execute your query on" class="flex-1 border rounded px-3 py-2">
+                <input type="text" name="query" placeholder="Write your query" class="flex-1 border rounded px-3 py-2">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Execute</button>
+            </form>
+        </div>
+    `;
+}
+
+function createTimerControls(component) {
+    return `
+        <div class="h-full flex flex-col justify-center">
+            <div class="timer-controls flex gap-2">
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" name="event" value="start">
+                    <button class="bg-green-500 text-white px-3 py-1 rounded">Start</button>
+                </form>
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" name="event" value="stop">
+                    <button class="bg-red-500 text-white px-3 py-1 rounded">Stop</button>
+                </form>
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" name="event" value="pause">
+                    <button class="bg-yellow-500 text-white px-3 py-1 rounded">Pause</button>
+                </form>
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" name="event" value="reset">
+                    <button class="bg-gray-500 text-white px-3 py-1 rounded">Reset</button>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function createFileShareControls(component) {
+    let fileOptions = '';
+    if (component.files) {
+        fileOptions = component.files.map(file =>
+            `<option value="${file.name}">${file.name} (${file.size} bytes)</option>`
+        ).join('');
+    }
+
+    return `
+        <div class="fileshare-controls mt-4">
+            <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                <div class="mb-2">
+                    <label for="filename-input-${component.id}" class="block text-sm font-medium">Filename</label>
+                    <input type="text" id="filename-input-${component.id}" name="filename" placeholder="Enter filename" class="border px-2 py-1 rounded w-full">
+                </div>
+                <div class="mb-4">
+                    <label for="filecontent-input-${component.id}" class="block text-sm font-medium">File Content</label>
+                    <textarea id="filecontent-input-${component.id}" name="content" placeholder="Enter file content" class="border px-2 py-1 rounded w-full h-24"></textarea>
+                </div>
+                <input type="hidden" name="event" value="upload">
+                <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded w-full">Upload</button>
+            </form>
+            <hr class="my-4">
+            <select name="filename" id="file-select-${component.id}" class="border px-2 py-1 rounded mb-2 w-full">
+                ${fileOptions}
+            </select>
+            <div class="flex gap-2">
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" id="filename-hidden-${component.id}" name="filename" value="">
+                    <input type="hidden" name="event" value="download">
+                    <button class="bg-blue-500 text-white px-3 py-1 rounded">Download</button>
+                </form>
+                <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                    <input type="hidden" id="filename-hidden-delete-${component.id}" name="filename" value="">
+                    <input type="hidden" name="event" value="delete">
+                    <button class="bg-red-500 text-white px-3 py-1 rounded">Delete</button>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function createDBUpdateControls(component) {
+    return `
+        <div class="dbupdate-controls mt-4">
+            <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/" class="flex flex-col gap-2">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                <input type="hidden" name="event" value="execute">
+                <div class="flex flex-col">
+                    <input type="text" name="db" placeholder="Database name (e.g., data.db)"
+                           value="${component.param?.db || ''}" class="border rounded px-3 py-2 mb-2">
+                    <textarea name="query" placeholder="Enter your parameters" rows="3" class="border rounded px-3 py-2"></textarea>
+                    ${component.qry || ''}
+                </div>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Execute Query</button>
+            </form>
+        </div>
+    `;
+}
+    function handleModalBackdropClick(event) {
+        if (event.target.id === 'env-modal') {
+            closeEnvModal();
+        }
+    }
+
+    function closeEnvModal() {
+        const modal = document.getElementById('env-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            const form = document.getElementById('env-form');
+            if (form) form.reset();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeButton = document.querySelector('#env-modal .flex.justify-between button');
+
+        const cancelButton = document.getElementById('modal-cancel-btn');
+
+        if (closeButton) closeButton.onclick = closeEnvModal;
+        if (cancelButton) cancelButton.onclick = closeEnvModal;
+
+        const modal = document.getElementById('env-modal');
+        if (modal) modal.onclick = handleModalBackdropClick;
+        const notification = document.querySelector('.notification');
+        if (notification) {
+            requestAnimationFrame(() => {
+                notification.classList.remove('translate-x-[110%]');
+                notification.classList.add('translate-x-0');
+            });
+
+            setTimeout(() => {
+                hideNotification(notification);
+            }, 5000);
+
+            const closeBtn = notification.querySelector('.notification-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => hideNotification(notification));
+            }
+        }
+    });
+    const dashboardId = window.location.pathname.split('/')[2];
+    const COMPONENTS_WITHOUT_ENV = ['SysStat', 'Timer', 'Chat'];
+    const COMPONENTS_WITH_ENV = {
+        'DBQuery': ['database', 'query'],
+        'FileShare': ['path'],
+        'URLGetter': ['url'],
+        'MessageRotate': ['messages'],
+        'FileWatch': ['filename', 'numberoflines'],
+        'DBUpdate': ['database', 'query']
+    };
+
+    let csrfToken = '';
+    let currentUsername = '';
+
+    $(document).ready(function() {
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfElement) {
+            csrfToken = csrfElement.value;
+        }
+
+    const usernameElement = document.querySelector('[name=username]');
+    if (usernameElement) {
+        currentUsername = usernameElement.value;
+    }
+        let autoRefreshInterval;
+        const REFRESH_INTERVAL = 3000;
+        document.querySelectorAll('.component-tool').forEach(tool => {
+            tool.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('component-type', tool.dataset.componentType);
+            });
+        });
+        async function handleComponentDrop(e, container) {
+            e.preventDefault();
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const cell = getClosestGridCell(mouseX, mouseY);
+            const componentType = e.dataTransfer.getData('component-type');
+
+            if (COMPONENTS_WITHOUT_ENV.includes(componentType)) {
+                await createComponent(componentType, cell.row, cell.column);
+            } else {
+                showEnvModal(componentType, COMPONENTS_WITH_ENV[componentType], async (envVars) => {
+                    await createComponent(componentType, cell.row, cell.column, envVars);
+                });
+            }
+        }
+
+        document.querySelectorAll('.dashboard-container').forEach((container) => {
+            container.addEventListener('dragover', (e) => e.preventDefault());
+            container.addEventListener('drop', (e) => handleComponentDrop(e, container));
+        });
+        function toggleComponentList() {
+            const list = document.getElementById('component-list');
+            const arrow = document.getElementById('arrow-icon');
+
+            if (list && arrow) {
+                list.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+
+                list.style.transition = 'all 0.3s ease-in-out';
+                arrow.style.transition = 'transform 0.3s ease-in-out';
+            }
+        }
+        function showEnvModal(componentType, envVars, onSubmit) {
+            const modal = document.getElementById('env-modal');
+            const fieldsContainer = document.getElementById('env-fields');
+
+            if (!modal || !fieldsContainer) return;
+
+            fieldsContainer.innerHTML = '';
+
+            fieldsContainer.innerHTML = `
+                <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                    <p class="text-sm text-gray-600">Configuring: <span class="font-semibold">${componentType}</span></p>
+                </div>
+            `;
+
+            envVars.forEach(varName => {
+                const fieldId = `env-${varName}-${Date.now()}`;
+                fieldsContainer.innerHTML += `
+                    <div class="space-y-1">
+                        <label for="${fieldId}" class="block text-sm font-medium text-gray-700">
+                            ${varName.charAt(0).toUpperCase() + varName.slice(1)}
+                        </label>
+                        <input type="text"
+                            id="${fieldId}"
+                            name="${varName}"
+                            class="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter ${varName}"
+                            required
+                        >
+                        <p class="text-xs text-gray-500">
+                            ${getEnvVarDescription(componentType, varName)}
+                        </p>
+                    </div>
+                `;
+            });
+
+            const form = document.getElementById('env-form');
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const values = {};
+                envVars.forEach(varName => {
+                    values[varName] = e.target.elements[varName].value.trim();
+                });
+
+                const emptyFields = envVars.filter(varName => !values[varName]);
+                if (emptyFields.length > 0) {
+                    alert(`Please fill in all required fields: ${emptyFields.join(', ')}`);
+                    return;
+                }
+
+                onSubmit(values);
+                closeEnvModal();
+            };
+
+            modal.classList.remove('hidden');
+        }
+
+        function getEnvVarDescription(componentType, varName) {
+            const descriptions = {
+                'DBQuery': {
+                    'database': 'The name of the database to query (e.g., data.db)',
+                    'query': 'SQL query to execute'
+                },
+                'FileShare': {
+                    'path': 'Directory path for file storage'
+                },
+                'URLGetter': {
+                    'url': 'URL to fetch data from (include http:// or https://)'
+                },
+                'MessageRotate': {
+                    'messages': 'Comma-separated list of messages to rotate through'
+                },
+                'FileWatch': {
+                    'filename': 'Name of the file to monitor',
+                    'numberoflines': 'Number of lines to display'
+                },
+                'DBUpdate': {
+                    'database': 'The name of the database to update',
+                    'query': 'SQL update query to execute'
+                }
+            };
+
+            return descriptions[componentType]?.[varName] || `Enter value for ${varName}`;
+        }
+
+        function closeEnvModal() {
+            const modal = document.getElementById('env-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                const form = document.getElementById('env-form');
+                if (form) {
+                    form.reset();
+                }
+            }
+            function handleModalBackdropClick(event) {
+                if (event.target.id === 'env-modal') {
+                    closeEnvModal();
+                }
+            }
+        }
+        function getClosestGridCell(mouseX, mouseY) {
+            const cellWidth = 100;
+            const cellHeight = 100;
+            return {
+                column: Math.floor(mouseX / cellWidth),
+                row: Math.floor(mouseY / cellHeight)
+            };
+        }
+        async function handleComponentDrop2(e, zone) {
+            e.preventDefault();
+            const componentType = e.dataTransfer.getData('component-type');
+            const row = parseInt(zone.dataset.row, 10);
+            const col = parseInt(zone.dataset.col, 10);
+
+            if (isNaN(row) || isNaN(col)) {
+                console.error('Invalid position:', row, col);
+                return;
+            }
+
+            if (COMPONENTS_WITHOUT_ENV.includes(componentType)) {
+                await createComponent(componentType, row, col);
+                return;
+            }
+
+            showEnvModal(componentType, COMPONENTS_WITH_ENV[componentType], async (envVars) => {
+                await createComponent(componentType, row, col, envVars);
+            });
+        }
+
+        async function createComponent(type, row, col, envVars = {}) {
+            const formData = new FormData();
+            formData.append('type', type);
+            formData.append('row', row.toString());
+            formData.append('col', col.toString());
+            formData.append('tab_name', getCurrentTab());
+
+            if (Object.keys(envVars).length > 0) {
+                Object.entries(envVars).forEach(([key, value], index) => {
+                    formData.append(`env_vars[${index}][key]`, key);
+                    formData.append(`env_vars[${index}][value]`, value);
+                });
+            }
+
+            try {
+                const response = await fetch(`/dashboard/${dashboardId}/tab/${getCurrentTab()}/component/create/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+
+                if (response.ok) {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+
+
+        function closeModal(el) {
+            $(el).closest('.fixed').remove();
+        }
+
+        function getEnvVarsForType(type) {
+            const envVarsMap = {
+                'Chat': ['name'], //FIXME
+                'Timer': ['interval'], //FIXME
+                'DBQuery': ['database', 'query'],
+                'FileShare': ['path'],
+                'URLGetter': ['url'],
+                'MessageRotate': ['messages'],
+                'FileWatch': ['filepath', 'filename', 'numberoflines'],
+                'SysStat': [],
+                'DBUpdate': ['database', 'query']
+            };
+
+            return envVarsMap[type] || [];
+        }
+
+
+
+        function getCurrentTab() {
+            return document.querySelector('.tab-content:not(.hidden)').id.replace('tab-', '');
+        }
+
+        function updateComponents() {
+   const dashboardId = window.location.pathname.split('/')[2];
+   const currentActiveTab = $('.tab-button.text-blue-600').data('tab') || $('.tab-button').first().data('tab');
+
+   const formValues = {};
+   let focusedElementInfo = null;
+
+   $('.component').each(function () {
+       const componentId = $(this).data('component-id');
+       formValues[componentId] = {
+           inputs: {},
+           textareas: {}
+       };
+
+       $(this).find('input[type="text"]').each(function () {
+           formValues[componentId].inputs[$(this).attr('name')] = $(this).val();
+       });
+
+       $(this).find('textarea').each(function () {
+           formValues[componentId].textareas[$(this).attr('name')] = $(this).val();
+       });
+   });
+
+   const activeElement = document.activeElement;
+   if ($(activeElement).is('input, textarea')) {
+       focusedElementInfo = {
+           name: $(activeElement).attr('name'),
+           value: $(activeElement).val(),
+           cursorPos: activeElement.selectionStart,
+       };
+   }
+
+   $.get(`/dashboard/${dashboardId}/data/`, function (data) {
+       const currentTabCount = $('.tab-button').length;
+        const newTabCount = data.tabs.length;
+       const newTabForm = $('.tabs form').detach();
+       const tabsContainer = $('.tabs');
+       tabsContainer.empty();
+
+       data.tabs.forEach(tab => {
+           const tabButton = $(`
+               <button class="tab-button px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700"
+                       data-tab="${tab.name}">
+                   ${tab.name}
+               </button>
+           `);
+           tabsContainer.append(tabButton);
+
+           let tabContent = $(`#tab-${tab.name}`);
+           if (!tabContent.length) {
+               tabContent = $(`
+                   <div class="tab-content hidden" id="tab-${tab.name}">
+                       <div class="dashboard-container" style="display: grid;
+                               grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                               gap: 10px;
+                               min-height: 100vh;
+                               position: relative;">
+                           <div class="component-grid mt-4"></div>
+                       </div>
+                   </div>
+               `).appendTo('.tabs-container');
+           }
+
+           tabButton.on('click', function () {
+               $('.tab-button').removeClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100')
+                   .addClass('text-gray-500');
+               $(this).removeClass('text-gray-500')
+                   .addClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100');
+               $('.tab-content').addClass('hidden');
+               $(`#tab-${tab.name}`).removeClass('hidden');
+               sessionStorage.setItem('activeTab', tab.name);
+           });
+
+           const componentGrid = tabContent.find('.component-grid');
+           componentGrid.empty();
+
+           tab.components.forEach((row, rowIndex) => {
+               const rowDiv = $('<div class="grid-row flex gap-4 mb-4"></div>');
+               row.forEach((component, colIndex) => {
+                   if (component) {
+                       const componentHtml = createComponentHtml(component);
+                       const $newComponent = $(componentHtml);
+
+                       if (formValues[component.id]) {
+                           Object.entries(formValues[component.id].inputs).forEach(([name, value]) => {
+                               $newComponent.find(`input[name="${name}"]`).val(value);
+                           });
+                           Object.entries(formValues[component.id].textareas).forEach(([name, value]) => {
+                               $newComponent.find(`textarea[name="${name}"]`).val(value);
+                           });
+                       }
+
+                       rowDiv.append($newComponent);
+                       initializeComponentControls(component);
+                   }
+               });
+               componentGrid.append(rowDiv);
+           });
+       });
+
+       tabsContainer.append(newTabForm);
+
+       if (currentActiveTab) {
+           $(`.tab-button[data-tab="${currentActiveTab}"]`).trigger('click');
+       } else {
+           $('.tab-button').first().trigger('click');
+       }
+
+       if (focusedElementInfo) {
+           const restoredElement = $(`[name="${focusedElementInfo.name}"]`);
+           if (restoredElement.length) {
+               restoredElement.focus();
+               restoredElement.get(0).setSelectionRange(focusedElementInfo.cursorPos, focusedElementInfo.cursorPos);
+           }
+       }
+
+       if (data.notifications !== undefined) {
+    notificationManager.show(data.notifications, 'success');
+}
+       if (newTabCount > currentTabCount) {
+        setTimeout(() => {
+            location.reload();
+        }, 100);
+    }
+   });
+}
+
+function switchTab(tabButton) {
+    const $button = $(tabButton);
+    const tabName = $button.data('tab');
+
+    $('.tab-button').removeClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100')
+                   .addClass('text-gray-500');
+    $button.removeClass('text-gray-500')
+           .addClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100');
+
+    $('.tab-content').addClass('hidden');
+    $(`#tab-${tabName}`).removeClass('hidden');
+
+    sessionStorage.setItem('activeTab', tabName);
+}
+
+$(document).ready(function() {
+    const activeTab = sessionStorage.getItem('activeTab');
+    if (activeTab) {
+        $(`.tab-button[data-tab="${activeTab}"]`).trigger('click');
+    } else {
+        $('.tab-button').first().trigger('click');
+    }
+
+    $('.tab-button').on('click', function() {
+        switchTab(this);
+    });
+});
+function getComponentControls(component) {
+    switch(component.title) {
+        case 'Chat':
+            return createChatControls(component);
+        case 'DBQuery':
+            return createDBQueryControls(component);
+        case 'Timer':
+            return createTimerControls(component);
+        case 'FileShare':
+            return createFileShareControls(component);
+        case 'DBUpdate':
+            return createDBUpdateControls(component);
+        default:
+            return '';
+    }
+}
+function createComponentHtml(component) {
+    let html = `
+        <div class="component bg-white p-4 rounded shadow flex-1" data-component-id="${component.id}">
+            <div class="component-header border-b pb-2 mb-2">
+                <h3 class="font-bold">${component.title}</h3>
+            </div>
+            <div class="component-content mb-4">
+                <div class="component-content mb-4 whitespace-pre-line">
+                    ${component.views}
+                </div>
+                ${getComponentControls(component)}
+            </div>
+            ${component.param ? createParameterForm(component) : ''}
+        </div>
+    `;
+    return html;
+}
+
+function createParameterForm(component) {
+    let paramInputs = '';
+    for (const [paramName, paramValue] of Object.entries(component.param)) {
+        paramInputs += `
+            <div class="param-input mb-2">
+                <label class="block text-sm font-medium">${paramName}</label>
+                <input type="text" name="${paramName}" value="${paramValue}" class="border px-2 py-1 w-full rounded">
+            </div>
+        `;
+    }
+
+    return `
+        <form method="post" action="/dashboard/${dashboardId}/component/${component.id}/trigger/">
+            <input type="hidden" name="csrfmiddlewaretoken" value="${document.querySelector('[name=csrfmiddlewaretoken]').value}">
+            ${paramInputs}
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Update</button>
+        </form>
+    `;
+}
+
+function initializeComponentControls(component) {
+    if (component.title === 'FileShare') {
+        $(`#file-select-${component.id}`).on('change', function() {
+            const selectedFilename = $(this).val();
+            $(`#filename-hidden-${component.id}`).val(selectedFilename);
+            $(`#filename-hidden-upload-${component.id}`).val(selectedFilename);
+            $(`#filename-hidden-delete-${component.id}`).val(selectedFilename);
+        }).trigger('change');
+    }
+}
+
+        function startAutoRefresh() {
+            updateComponents();
+            autoRefreshInterval = setInterval(updateComponents, REFRESH_INTERVAL);
+        }
+
+        function stopAutoRefresh() {
+            clearInterval(autoRefreshInterval);
+        }
+
+        function switchTab(tabButton) {
+            const tabName = $(tabButton).data('tab');
+            sessionStorage.setItem('activeTab', tabName);
+
+            $('.tab-button').removeClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100').addClass('text-gray-500');
+            $(tabButton).removeClass('text-gray-500').addClass('text-blue-600 border-b-2 border-blue-600 bg-blue-100');
+
+            $('.tab-content').addClass('hidden');
+            $(`#tab-${tabName}`).removeClass('hidden');
+        }
+        $('.tab-button').on('click', function () {
+            switchTab(this);
+        });
+
+        function restoreTabState() {
+            const activeTab = sessionStorage.getItem('activeTab');
+            if (activeTab) {
+                const tabButton = $(`.tab-button[data-tab="${activeTab}"]`);
+                if (tabButton.length) {
+                    switchTab(tabButton);
+                }
+            }
+        }
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeEnvModal();
+            }
+        });
+        $('select[name="filename"]').on('change', function () {
+            const componentId = $(this).attr('id').replace('file-select-', '');
+            const selectedFilename = $(this).val();
+            $(`#filename-hidden-${componentId}`).val(selectedFilename);
+            $(`#filename-hidden-upload-${componentId}`).val(selectedFilename);
+            $(`#filename-hidden-delete-${componentId}`).val(selectedFilename);
+        });
+
+        $('select[name="filename"]').trigger('change');
+
+        restoreTabState();
+        startAutoRefresh();
+    });
+
+
+
+</script>
+{% endblock %}
