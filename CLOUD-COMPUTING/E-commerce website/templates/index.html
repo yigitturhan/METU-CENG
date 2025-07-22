@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Welcome to Vintage Treasures</h1>
+
+    <!-- Category Filter -->
+    <div class="category-filter mb-4">
+        <h3>Filter by Category</h3>
+        <ul class="categories">
+            <li><a href="{{ url_for('items.index') }}" {% if not request.args.get('category') %}class="active"{% endif %}>All</a></li>
+            {% for category in categories %}
+            <li>
+                <a href="{{ url_for('items.index', category=category) }}"
+                   {% if request.args.get('category') == category %}class="active"{% endif %}>
+                    {{ category }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Items Grid -->
+    <div class="row">
+        {% for item in items %}
+        <div class="col-md-4 col-sm-6">
+            <div class="item-card">
+                <img src="{{ item.image }}" alt="{{ item.name }}" class="mb-3">
+                <h3>{{ item.name }}</h3>
+                <p class="price">${{ "%.2f"|format(item.price) }}</p>
+                <div class="rating">
+                    <span>
+                        Rating: {{ "%.1f"|format(item.rating|default(0)) }}/10
+                        ({{ item.review_count|default(0) }} reviews)
+                    </span>
+                </div>
+                <a href="{{ url_for('items.view', item_id=item._id) }}" class="btn btn-primary">View Details</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No items found in this category. Check back later!
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

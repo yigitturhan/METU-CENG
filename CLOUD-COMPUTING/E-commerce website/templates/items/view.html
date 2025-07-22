@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ item.name }} - Vintage Treasures{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item"><a href="/?category={{ item.category }}">{{ item.category }}</a></li>
+            <li class="breadcrumb-item active">{{ item.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mt-4">
+        <!-- Item Image -->
+        <div class="col-md-5">
+            <img src="{{ item.image }}" alt="{{ item.name }}" class="img-fluid rounded">
+        </div>
+
+        <!-- Item Details -->
+        <div class="col-md-7">
+            <h1>{{ item.name }}</h1>
+            <p class="lead">{{ item.description }}</p>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="price mb-0">${{ "%.2f"|format(item.price) }}</h3>
+                <span class="badge bg-info">{{ item.category }}</span>
+            </div>
+
+            <div class="rating mb-3">
+                <strong>Rating:</strong> {{ "%.1f"|format(item.rating|default(0)) }}/10
+                ({{ item.review_count|default(0) }} reviews)
+            </div>
+
+            <p><strong>Seller:</strong> {{ item.seller }}</p>
+
+            <!-- Category-specific attributes -->
+            {% if item.category == 'GPS Sport Watches' and item.battery_life %}
+                <p><strong>Battery Life:</strong> {{ item.battery_life }}</p>
+            {% endif %}
+
+            {% if item.category in ['Antique Furniture', 'Vinyls'] and item.age %}
+                <p><strong>Age:</strong> {{ item.age }} years</p>
+            {% endif %}
+
+            {% if item.category == 'Running Shoes' and item.size %}
+                <p><strong>Size:</strong> {{ item.size }}</p>
+            {% endif %}
+
+            {% if item.category in ['Antique Furniture', 'Running Shoes'] and item.material %}
+                <p><strong>Material:</strong> {{ item.material }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Review Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3>Reviews</h3>
+            <hr>
+
+            {% if session.get('user_id') %}
+            <!-- Review Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Write a Review</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('items.review', item_id=item._id) }}">
+                        <div class="mb-3">
+                            <label for="rating" class="form-label">Rating (1-10)</label>
+                            <input type="number" class="form-control" id="rating" name="rating" min="1" max="10" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="review" class="form-label">Your Review</label>
+                            <textarea class="form-control" id="review" name="review" rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Review</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <a href="{{ url_for('auth.login') }}">Login</a> to leave a review.
+            </div>
+            {% endif %}
+
+            <!-- Reviews List -->
+            <div class="reviews-list">
+                {% for review in item.reviews %}
+                <div class="review-card">
+                    <div class="d-flex justify-content-between">
+                        <h5>{{ review.user_name }}</h5>
+                        <span class="rating">Rating: {{ review.rating }}/10</span>
+                    </div>
+                    <p>{{ review.text }}</p>
+                </div>
+                {% else %}
+                <p>No reviews yet. Be the first to review this item!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

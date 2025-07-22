@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New User - Admin - Vintage Treasures{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Add New User</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                    <label class="form-check-label" for="is_admin">Admin privileges</label>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
